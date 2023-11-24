@@ -66,5 +66,6 @@ tar -xzf /tmp/startup.tar.gz -C /etc
 log_say "Removing our script before reboot"
 rm -- "$0"
 
-log_say "Reboot to uptake our rc.custom boot script"
-reboot
+log_say "Running our stage3 script"
+/etc/init.d/custom enable
+/etc/init.d/custom start

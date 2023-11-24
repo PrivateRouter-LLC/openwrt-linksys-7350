@@ -1,5 +1,8 @@
 name: Build OpenWRT Images
-on: [push]
+on:
+  push:
+    branches:
+      - '*'
 
 jobs:
     build:
@@ -7,12 +10,27 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
+            - name: Free Disk Space (Ubuntu)
+              uses: jlumbroso/free-disk-space@main
+              with:
+                tool-cache: false
+                android: true
+                dotnet: true
+                haskell: true
+                large-packages: true
+                docker-images: true
+                swap-storage: true
+
             - name: Checkout
               uses: actions/checkout@v2
+              
+            - name: Update REPO variable in .profile if branch is not main
+              if: github.ref != 'refs/heads/main'
+              run: sed -i "s/^REPO=main\$/REPO=${GITHUB_REF#refs/heads/}/" files/root/.profile
 
             - name: Build target images
               run: |
-                bash build_gli_beryl.sh
+                bash build_openwrt.sh
 
             - name: TAR output
               run: tar -cvf images.tar images
@@ -43,11 +61,22 @@ jobs:
             - name: Get the current date
               run: echo "NOW=$(date +%F)" >> $GITHUB_ENV
 
-            - name: Create a release
+            - name: Create a release (branch main)
+              if: github.ref == 'refs/heads/main'
               uses: "marvinpinto/action-automatic-releases@latest"
               with:
                 repo_token: "${{ secrets.GITHUB_TOKEN }}"
                 prerelease: false
                 title: "OpenWRT PrivateRouter SHA ${{ env.GITHUB_SHA_SHORT }}"
                 automatic_release_tag: "OpenWRT-PrivateRouter-${{ env.GITHUB_SHA_SHORT }}"
+                files: images/*
+
+            - name: Create a release (branch testing)
+              if: github.ref != 'refs/heads/main'
+              uses: "marvinpinto/action-automatic-releases@latest"
+              with:
+                repo_token: "${{ secrets.GITHUB_TOKEN }}"
+                prerelease: true
+                title: "Test OpenWRT PrivateRouter SHA ${{ env.GITHUB_SHA_SHORT }}"
+                automatic_release_tag: "TESTING-OpenWRT-PrivateRouter-${{ env.GITHUB_SHA_SHORT }}"
                 files: images/*

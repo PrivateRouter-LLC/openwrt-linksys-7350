@@ -30,6 +30,21 @@ wait_for_opkg() {
   log_say "opkg is released, our turn!"
 }
 
+install_privaterouter_repo() {
+    # First we check if the repo is already installed
+    if [ ! -f /etc/opkg/keys/090708f5d9b5b73c ]; then
+        log_say "Installing PrivateRouter repo public key"
+        wget -qO /tmp/public.key https://repo.privaterouter.com/public.key
+        opkg-key add /tmp/public.key
+        rm /tmp/public.key 
+    fi
+    # Next check if the repo is in /etc/opkg/customfeeds.conf
+    if ! grep -q "privaterouter_repo" /etc/opkg/customfeeds.conf; then
+        log_say "Adding PrivateRouter repo to /etc/opkg/customfeeds.conf"
+        echo "src/gz privaterouter_repo https://repo.privaterouter.com" >> /etc/opkg/customfeeds.conf
+    fi
+}
+
 installPackages()
 {
     signalAutoprovisionWaitingForUser
@@ -68,16 +83,11 @@ installPackages()
    log_say " █████   █████░░██████  ░░████████  ░░█████ ░░██████  █████           "
    log_say "░░░░░   ░░░░░  ░░░░░░    ░░░░░░░░    ░░░░░   ░░░░░░  ░░░░░            "
 
+   # Install our repo before we update opkg
+   install_privaterouter_repo
+
    opkg update
-    ## INSTALL MESH  ##
-    log_say "Installing Mesh Packages..."
-    opkg install tgrouterappstore luci-app-shortcutmenu luci-app-poweroff luci-app-wizard
-    opkg remove wpad wpad-mbedtls wpad-basic wpad-basic-openssl wpad-basic-wolfssl wpad-wolfssl
-    opkg install wpad-mesh-openssl kmod-batman-adv batctl avahi-autoipd batctl-full luci-app-dawn
-    opkg install /etc/luci-app-easymesh_2.4_all.ipk
-    opkg install /etc/luci-proto-batman-adv_git-22.104.47289-0a762fd_all.ipk
-   
-   
+
    #Go Go Packages
    opkg install base-files busybox cgi-io dropbear firewall fstools fwtool getrandom hostapd-common ip6tables iptables iw iwinfo jshn jsonfilter kernel
    opkg install kmod-ath kmod-ath9k kmod-ath9k-common kmod-cfg80211 kmod-gpio-button-hotplug kmod-ip6tables kmod-ipt-conntrack kmod-ipt-core kmod-ipt-nat kmod-ipt-offload
@@ -95,11 +105,6 @@ installPackages()
    opkg install kmod-usb-net-cdc-ether kmod-usb-net-cdc-subset kmod-nls-base kmod-usb-core kmod-usb-net kmod-usb-net-cdc-ether kmod-usb2 kmod-usb-net-ipheth libimobiledevice luci-app-nlbwmon luci-app-adblock
    opkg install nano
 
-   ## Remove DNSMasq
-   opkg remove dnsmasq
-   rm /etc/config/dhcp
-   opkg install dnsmasq-full
-
    log_say "PrivateRouter update complete!"
 }
 
@@ -116,12 +121,6 @@ autoprovisionStage2()
     #setRootPassword ""
 
     installPackages
-
-    chmod +x ${overlay_root}/etc/rc.local
-    cat >${overlay_root}/etc/rc.local <<EOF
-chmod a+x /etc/stage3.sh
-bash /etc/stage3.sh || exit 1
-EOF
 
 }
 
@@ -166,4 +165,6 @@ fixPackagesDNS
 
 autoprovisionStage2
 
-reboot
+# Do not reboot yet on this router, go straight into stage3
+echo "" > /etc/rc.local
+bash /etc/stage3.sh
