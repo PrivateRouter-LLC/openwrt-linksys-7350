@@ -3,7 +3,7 @@
 BASEDIR=$(realpath "$0" | xargs dirname)
 
 OUTPUT="${BASEDIR}/images"
-BUILD_VERSION="23.05.0"
+BUILD_VERSION="23.05.1"
 BOARD_NAME="ramips"
 BOARD_SUBNAME="mt7621"
 BUILDER="https://downloads.openwrt.org/releases/${BUILD_VERSION}/targets/${BOARD_NAME}/${BOARD_SUBNAME}/openwrt-imagebuilder-${BUILD_VERSION}-${BOARD_NAME}-${BOARD_SUBNAME}.Linux-x86_64.tar.xz"
